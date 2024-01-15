@@ -1,0 +1,8 @@
+name: Env2
+dependencies:
+  - python=3.11.5
+  - pip
+  - pip:
+    - ipykernel
+    - dash
+    - pandas
