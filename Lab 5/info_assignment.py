@@ -1,48 +1,67 @@
-import dotenv
-import csv
+from dotenv import load_dotenv
+import pandas as pd
+from tqdm import tqdm
+import multiprocessing
+import os
 import requests
-import time
-from multiprocessing import Pool
 
-GENIUS_API_TOKEN = "YOUR_GENIUS_API_TOKEN"
+def env_load():
+    load_dotenv()
+    return os.environ['ACCESS_TOKEN']
 
-def fetch_data(search_term):
+def genius(search_term, access_token, per_page=15):
     try:
-        url = f"https://api.genius.com/search?q={search_term}"
-        headers = {"Authorization": f"Bearer {GENIUS_API_TOKEN}"}
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise an exception for 4xx or 5xx errors
-        data = response.json()
-        return data
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data for '{search_term}': {e}")
-        return None
+        genius_search_url = f"http://api.genius.com/search?q={search_term}&" + \
+                            f"access_token={access_token}&per_page={per_page}"
 
-def process_search_term(search_term):
-    data = fetch_data(search_term)
-    if data:
-        # Process data here if needed
-        return data
-    else:
-        return None
+        response = requests.get(genius_search_url)
+        json_data = response.json()
 
-def main():
-    search_terms = ["Python", "Machine Learning", "Data Science", "Artificial Intelligence"]
-    results = []
+    except Exception as e:
+        print(e)
+    return json_data['response']['hits']
 
-    # Using multiprocessing for parallel execution
-    with Pool(processes=len(search_terms)) as pool:
-        results = pool.map(process_search_term, search_terms)
+def genius_to_df(search_term, access_token, n_results_per_term=10):
+    try:
+        print(f"Processing iteration for item: {search_term} in process {os.getpid()}")
+        json_data = genius(search_term, access_token, per_page=n_results_per_term)
+        hits = [hit['result'] for hit in json_data]
+        df = pd.DataFrame(hits)
 
-    # Writing results to a CSV file
-    with open("genius_search_results.csv", "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["Search Term", "Result Count", "Results"])
-        for search_term, result in zip(search_terms, results):
-            if result:
-                writer.writerow([search_term, result["meta"]["total"], result["response"]["hits"]])
-            else:
-                writer.writerow([search_term, "Error", ""])
+        # expand dictionary elements
+        df_stats = df['stats'].apply(pd.Series)
+        df_stats.rename(columns={c:'stat_' + c for c in df_stats.columns},
+                        inplace=True)
+        
+        df_primary = df['primary_artist'].apply(pd.Series)
+        df_primary.rename(columns={c:'primary_artist_' + c for c in df_primary.columns},
+                        inplace=True)
+        
+        df = pd.concat((df, df_stats, df_primary), axis=1)
+        return df
+    except Exception as e:
+        print(e)
+
+def save_to_csv(df_list):
+    res_df = pd.concat(df_list)
+    res_df.to_csv('genius_output.csv', index=False, header=True)
+    return
 
 if __name__ == "__main__":
-    main()
+
+    dfs = []
+    processes = []
+    result_queue = multiprocessing.Queue()
+
+    try:
+        access_token = env_load()
+        search_terms = ['Taylor Swift', 'One Direction', 'Selena Gomez', 'Harry Styles', 'The Weekend', 'Lana Del Rey', 'Joji', 'Halsey', 'Dua Lipa', 'Ariana Grande']
+
+        for item  in search_terms:
+            dfs.append(genius_to_df(item, access_token))
+
+        
+        save_to_csv(dfs)
+         
+    except Exception as e:
+        print(e)
