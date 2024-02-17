@@ -1,67 +1,81 @@
-from dotenv import load_dotenv
-import pandas as pd
-from tqdm import tqdm
-import multiprocessing
-import os
+# built-in
 import requests
+import os
 
-def env_load():
-    load_dotenv()
-    return os.environ['ACCESS_TOKEN']
+from multiprocessing import Pool
+from time import sleep
 
-def genius(search_term, access_token, per_page=15):
+# user-installed
+import pandas as pd
+
+from tqdm import tqdm
+from numpy.random import uniform
+from dotenv import load_dotenv
+
+
+search_terms = ['The Beatles', 
+                    'Missy Elliot', 
+                    'Andy Shauf', 
+                    'Slowdive', 
+                    'Men I Trust']
+n = 10
+dfs = []
+load_dotenv()
+
+ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
+NAME_DEMO = __name__
+
+
+def genius(search_term, per_page=15):
+    '''
+    Collect data from the Genius API by searching for `search_term`.
+    
+    **Assumes ACCESS_TOKEN is loaded in the environment.**
+    '''
+    genius_search_url = f"http://api.genius.com/search?q={search_term}&" + \
+                        f"access_token={ACCESS_TOKEN}&per_page={per_page}"
+    
     try:
-        genius_search_url = f"http://api.genius.com/search?q={search_term}&" + \
-                            f"access_token={access_token}&per_page={per_page}"
-
-        response = requests.get(genius_search_url)
+        response = requests.get(genius_search_url) 
         json_data = response.json()
+        return json_data['response']['hits']
+    except requests.exceptions.RequestException as e:
+        print(f"Error for search term '{search_term}': {e}")
+        return []
 
-    except Exception as e:
-        print(e)
-    return json_data['response']['hits']
 
-def genius_to_df(search_term, access_token, n_results_per_term=10):
-    try:
-        print(f"Processing iteration for item: {search_term} in process {os.getpid()}")
-        json_data = genius(search_term, access_token, per_page=n_results_per_term)
-        hits = [hit['result'] for hit in json_data]
-        df = pd.DataFrame(hits)
+def genius_to_df(search_term, n_results_per_term=10):
+    json_data = genius(search_term, per_page=n_results_per_term)
+    
+    if not json_data:
+        return pd.DataFrame()  
+    
+    hits = [hit['result'] for hit in json_data]
+    df = pd.DataFrame(hits)
 
-        # expand dictionary elements
-        df_stats = df['stats'].apply(pd.Series)
-        df_stats.rename(columns={c:'stat_' + c for c in df_stats.columns},
-                        inplace=True)
-        
-        df_primary = df['primary_artist'].apply(pd.Series)
-        df_primary.rename(columns={c:'primary_artist_' + c for c in df_primary.columns},
-                        inplace=True)
-        
-        df = pd.concat((df, df_stats, df_primary), axis=1)
-        return df
-    except Exception as e:
-        print(e)
+    df_stats = df['stats'].apply(pd.Series)
+    df_stats.rename(columns={c:'stat_' + c for c in df_stats.columns},
+                    inplace=True)
+    
+    df_primary = df['primary_artist'].apply(pd.Series)
+    df_primary.rename(columns={c:'primary_artist_' + c for c in df_primary.columns},
+                      inplace=True)
+    
+    df = pd.concat((df, df_stats, df_primary), axis=1)
+    
+    return df
 
-def save_to_csv(df_list):
-    res_df = pd.concat(df_list)
-    res_df.to_csv('genius_output.csv', index=False, header=True)
-    return
+
+def process_search_term(search_term):
+    df = genius_to_df(search_term, n_results_per_term=n)
+    return df
+
 
 if __name__ == "__main__":
+    with Pool(processes=len(search_terms)) as pool:
+        dfs = list(tqdm(pool.imap(process_search_term, search_terms), total=len(search_terms)))
 
-    dfs = []
-    processes = []
-    result_queue = multiprocessing.Queue()
+    df_genius = pd.concat(dfs)
+    df_genius.to_csv("C:\\Users\\varsh\\OneDrive\\Desktop\\Gitstuff\\Lab 5\\genius_output.csv", index=False)
 
-    try:
-        access_token = env_load()
-        search_terms = ['Taylor Swift', 'One Direction', 'Selena Gomez', 'Harry Styles', 'The Weekend', 'Lana Del Rey', 'Joji', 'Halsey', 'Dua Lipa', 'Ariana Grande']
 
-        for item  in search_terms:
-            dfs.append(genius_to_df(item, access_token))
-
-        
-        save_to_csv(dfs)
-         
-    except Exception as e:
-        print(e)
