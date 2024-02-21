@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><graph edgedefault="undirected"><node id="Rory"/>
+<node id="Rachel"/>
+<node id="Ross"/>
+<node id="Emma"/>
+<node id="Monika"/>
+<node id="Dean"/>
+<node id="Lorelai"/>
+<node id="Lane"/>
+<node id="Phoebe"/>
+<node id="Chandler"/>
+<node id="Joey"/>
+<edge source="Rory" target="Dean"/>
+<edge source="Rory" target="Lorelai"/>
+<edge source="Rory" target="Lane"/>
+<edge source="Rory" target="Emma"/>
+<edge source="Rachel" target="Phoebe"/>
+<edge source="Rachel" target="Ross"/>
+<edge source="Rachel" target="Monika"/>
+<edge source="Rachel" target="Emma"/>
+<edge source="Ross" target="Chandler"/>
+<edge source="Ross" target="Joey"/>
+<edge source="Ross" target="Emma"/>
+<edge source="Emma" target="Monika"/>
+<edge source="Monika" target="Phoebe"/>
+<edge source="Monika" target="Joey"/>
+<edge source="Monika" target="Chandler"/>
+</graph></graphml>
