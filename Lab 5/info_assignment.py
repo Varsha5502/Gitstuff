@@ -1,11 +1,9 @@
-# built-in
 import requests
 import os
 
 from multiprocessing import Pool
 from time import sleep
 
-# user-installed
 import pandas as pd
 
 from tqdm import tqdm
@@ -13,12 +11,7 @@ from numpy.random import uniform
 from dotenv import load_dotenv
 
 
-search_terms = ['The Beatles', 
-                    'Missy Elliot', 
-                    'Andy Shauf', 
-                    'Slowdive', 
-                    'Men I Trust']
-n = 10
+n = 15
 dfs = []
 load_dotenv()
 
@@ -65,6 +58,11 @@ def genius_to_df(search_term, n_results_per_term=10):
     
     return df
 
+search_terms = ['The Beatles', 
+                    'Missy Elliot', 
+                    'Andy Shauf', 
+                    'Slowdive', 
+                    'Men I Trust']
 
 def process_search_term(search_term):
     df = genius_to_df(search_term, n_results_per_term=n)
